@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Request
+from fastapi import APIRouter, status, Request, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 import bcrypt
@@ -12,6 +12,7 @@ from serializers.auth import GetTeamUserData, GetTeam, LoginUser, UserTokenPaylo
 from models.user import User
 from models.team import Team, Roles
 from models.enum import UserRoleEnum
+from .queries import get_session, get_team_by_urlname
 
 
 
@@ -23,19 +24,20 @@ async def auth_up():
     return JSONResponse({"Success":"AUth API working"}, status_code=status.HTTP_200_OK)
 
 @router.post('/team/check')
-async def team_check(req:GetTeam):
-    with Session(engine) as sesssion:
+async def team_check(req:GetTeam, session: Session = Depends(get_session)):
+    try:
         print(req.name)
         statement = select(Team).where(Team.name == req.name)
-        team = sesssion.exec(statement).first()
+        team = session.exec(statement).first()
         if team:
             return JSONResponse({"Error":"Team Name exists"}, status_code=status.HTTP_400_BAD_REQUEST)
         return JSONResponse({'Success':'No team name exist'}, status_code=status.HTTP_200_OK)
-    return JSONResponse({'Error':'Error on team check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except:
+        return JSONResponse({'Error':'Error on team check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post('/signup')
-async def signup(req:GetTeamUserData):
-    with Session(engine) as session:
+async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
+    try:
         #received data for team and user
         #check if team name not yet exists via /team/check api
         #check if user email not yet exists
@@ -104,13 +106,13 @@ async def signup(req:GetTeamUserData):
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
 
         return res
-    return JSONResponse({'Error':'Error on signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except:
+        return JSONResponse({'Error':'Error on signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post('/team/member/signup/{team_id}')
 async def member_signup(team_id: str, req:GetMemberUserData):
     with Session(engine) as session:
-        team_statement = select(Team).where(Team.urlname == team_id)
-        team = session.exec(team_statement).first()
+        team = get_team_by_urlname(team_id)
         if not team:
             return JSONResponse({"Error":"No team found!"}, status_code=status.HTTP_400_BAD_REQUEST)
         user_statement = select(User).where(User.email == req.email)
@@ -145,10 +147,11 @@ async def member_signup(team_id: str, req:GetMemberUserData):
 
 
 @router.post('/login')
-async def login(req:LoginUser):
-    with Session(engine) as session:
+async def login(req:LoginUser, session: Session = Depends(get_session)):
+    try:
         statement = select(User).where(User.email == req.email)
         user = session.exec(statement).first()
+        print(type(user))
         if not user:
             return JSONResponse({"Error":"Invalid Credentials"}, status_code=status.HTTP_400_BAD_REQUEST)
         #check if not user 
@@ -162,7 +165,8 @@ async def login(req:LoginUser):
         token = create_token(user_json)
         res.set_cookie('jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
         return res
-    return JSONResponse({"Error":"Error on login"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except:
+        return JSONResponse({"Error":"Error on login"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post('/logout')
 async def logout():

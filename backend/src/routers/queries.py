@@ -11,7 +11,7 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-def get_team_by_urlname(urlname: str, session: Session = Depends(get_session)):
+def get_team_by_urlname(urlname: str, session: Session):
     """
         Returns Team model result using urlname
     """
@@ -19,7 +19,7 @@ def get_team_by_urlname(urlname: str, session: Session = Depends(get_session)):
     team = session.exec(team_statement).first()
     return team
 
-def get_user_by_email(email: str, session: Session = Depends(get_session)):
+def get_user_by_email(email: str, session: Session):
     """
         Returns User model result using email
     """

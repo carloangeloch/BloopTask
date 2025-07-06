@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
+from datetime import datetime
 
 class GetTeamUserData(BaseModel):
     email: EmailStr
@@ -24,6 +25,9 @@ class LoginUser(BaseModel):
     email: str
     password: str
 
+    model_config = ConfigDict(from_attributes=True)
+    
+
 class UserTokenPayload(BaseModel):
     email: EmailStr
     first_name: str
@@ -32,3 +36,4 @@ class UserTokenPayload(BaseModel):
     role_id: int
 
     model_config = ConfigDict(from_attributes=True)
+    

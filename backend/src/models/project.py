@@ -29,7 +29,7 @@ class Tasklist(SQLModel, table=True):
 
     project: 'Project' = Relationship(back_populates='tasklist')
     #cascades
-    task: List['Task'] =Relationship(back_populates='tasklist', cascade_delete=True)
+    task: List['Task'] = Relationship(back_populates='tasklist', cascade_delete=True)
 
 class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

@@ -12,12 +12,9 @@ from serializers.auth import GetTeamUserData, GetTeam, LoginUser, UserTokenPaylo
 from models.user import User
 from models.team import Team, Roles
 from models.enum import UserRoleEnum
-from .queries import get_session, get_team_by_urlname
-
-
+from .queries import get_session, get_team_by_urlname, get_user_by_email
 
 router = APIRouter()
-
 
 @router.get('/up')
 async def auth_up():
@@ -26,7 +23,6 @@ async def auth_up():
 @router.post('/team/check')
 async def team_check(req:GetTeam, session: Session = Depends(get_session)):
     try:
-        print(req.name)
         statement = select(Team).where(Team.name == req.name)
         team = session.exec(statement).first()
         if team:
@@ -41,12 +37,10 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         #received data for team and user
         #check if team name not yet exists via /team/check api
         #check if user email not yet exists
-        user_statement = select(User).where(User.email == req.email)
-        user = session.exec(user_statement).first()
+        user = get_user_by_email(req.email, session)
         if user:
             return JSONResponse({"Error":"Email already exists"}, status_code=status.HTTP_400_BAD_REQUEST)
-        hashed_password= bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
-
+        hashed_password=bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
         team_url = req.team_name.lower().strip().replace(' ','-') + '-' + os.urandom(8).hex()
         #create team data
         new_team = Team(
@@ -57,8 +51,7 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         session.add(new_team)
         session.commit()
         session.refresh(new_team)
-        team_statement = select(Team).where(Team.urlname == team_url)
-        team = session.exec(team_statement).first()
+        team = get_team_by_urlname(team, session)
 
         #create roles data
         new_role_admin = Roles(
@@ -104,19 +97,17 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         user_json = json.loads(UserTokenPayload.model_validate(new_user).model_dump_json())
         token = create_token(user_json)
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
-
         return res
     except:
         return JSONResponse({'Error':'Error on signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post('/team/member/signup/{team_id}')
-async def member_signup(team_id: str, req:GetMemberUserData):
-    with Session(engine) as session:
-        team = get_team_by_urlname(team_id)
+async def member_signup(team_id: str, req:GetMemberUserData, session: Session = Depends(get_session)):
+    try:
+        team = get_team_by_urlname(team_id, session)
         if not team:
             return JSONResponse({"Error":"No team found!"}, status_code=status.HTTP_400_BAD_REQUEST)
-        user_statement = select(User).where(User.email == req.email)
-        user = session.exec(user_statement).first()
+        user = get_user_by_email(req.email, session)
         if user:
             return JSONResponse({"Error":"User already exists"}, status_code=status.HTTP_400_BAD_REQUEST)
         hashed_password = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
@@ -143,15 +134,13 @@ async def member_signup(team_id: str, req:GetMemberUserData):
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
 
         return res
-    return JSONResponse({'Error':'Error on member signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    except:
+        return JSONResponse({'Error':'Error on member signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @router.post('/login')
 async def login(req:LoginUser, session: Session = Depends(get_session)):
     try:
-        statement = select(User).where(User.email == req.email)
-        user = session.exec(statement).first()
-        print(type(user))
+        user = get_user_by_email(req.email, session)
         if not user:
             return JSONResponse({"Error":"Invalid Credentials"}, status_code=status.HTTP_400_BAD_REQUEST)
         #check if not user 
@@ -174,7 +163,6 @@ async def logout():
     res.delete_cookie('jwt')
     return res
     
-
 @router.post('/check')
 async def check(req: Request):
     token = req.cookies.get('jwt')

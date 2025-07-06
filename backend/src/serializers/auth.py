@@ -9,6 +9,14 @@ class GetTeamUserData(BaseModel):
     suffix: str
     team_name: str
 
+class GetMemberUserData(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    middle_name: str
+    last_name: str
+    suffix: str
+
 class GetTeam(BaseModel):
     name: str
 

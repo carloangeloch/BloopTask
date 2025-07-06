@@ -4,6 +4,7 @@ from datetime import datetime
 
 if TYPE_CHECKING:
     from .user import User
+    from .project import Project
 
 class Team(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -11,8 +12,10 @@ class Team(SQLModel, table=True):
     urlname: str
     created_at: datetime = Field(default=datetime.now())
 
-    roles: List["Roles"] = Relationship(back_populates="team")
-    user: List["User"] = Relationship(back_populates='team')
+    #cascades
+    roles: List["Roles"] = Relationship(back_populates="team", cascade_delete=True)
+    user: List["User"] = Relationship(back_populates='team', cascade_delete=True)
+    project: List["Project"] = Relationship(back_populates='team', cascade_delete=True)
 
 class Roles(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)

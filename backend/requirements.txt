@@ -30,7 +30,7 @@ mdurl==0.1.2
 packaging==25.0
 pluggy==1.6.0
 postgrest==1.1.1
-psycopg2==2.9.10
+psycopg2-binary==2.9.10
 pycparser==2.22
 pydantic==2.11.7
 pydantic_core==2.33.2
@@ -59,5 +59,6 @@ typer==0.16.0
 typing-inspection==0.4.1
 typing_extensions==4.14.0
 uvicorn==0.35.0
+uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1

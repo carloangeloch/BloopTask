@@ -8,9 +8,10 @@ import json
 
 from lib.db import engine
 from lib.jwt import create_token, verify_token
-from serializers.auth import GetTeamUserData, GetTeam, LoginUser, UserTokenPayload
+from serializers.auth import GetTeamUserData, GetTeam, LoginUser, UserTokenPayload, GetMemberUserData
 from models.user import User
 from models.team import Team, Roles
+from models.enum import UserRoleEnum
 
 
 
@@ -57,15 +58,26 @@ async def signup(req:GetTeamUserData):
         team_statement = select(Team).where(Team.urlname == team_url)
         team = session.exec(team_statement).first()
 
-        #create role data
-        new_role = Roles(
-            name = 'members',
+        #create roles data
+        new_role_admin = Roles(
+            name = UserRoleEnum.ADMIN.value,
             team_id=team.id
-        )       
-        session.add(new_role)
+        )
+        new_role_mod = Roles(
+            name = UserRoleEnum.MODERATOR.value,
+            team_id=team.id
+        )
+        new_role_member = Roles(
+            name = UserRoleEnum.MEMBER.value,
+            team_id=team.id
+        )
+        
+        session.add_all([new_role_admin, new_role_member, new_role_mod])
         session.commit()
-        session.refresh(new_role) 
-        role_statement = select(Roles).where(Roles.name == 'members')
+        session.refresh(new_role_admin) 
+        session.refresh(new_role_mod) 
+        session.refresh(new_role_member) 
+        role_statement = select(Roles).where(Roles.name == 'admin')
         role = session.exec(role_statement).first()
         
         #create user data
@@ -93,6 +105,44 @@ async def signup(req:GetTeamUserData):
 
         return res
     return JSONResponse({'Error':'Error on signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@router.post('/team/member/signup/{team_id}')
+async def member_signup(team_id: str, req:GetMemberUserData):
+    with Session(engine) as session:
+        team_statement = select(Team).where(Team.urlname == team_id)
+        team = session.exec(team_statement).first()
+        if not team:
+            return JSONResponse({"Error":"No team found!"}, status_code=status.HTTP_400_BAD_REQUEST)
+        user_statement = select(User).where(User.email == req.email)
+        user = session.exec(user_statement).first()
+        if user:
+            return JSONResponse({"Error":"User already exists"}, status_code=status.HTTP_400_BAD_REQUEST)
+        hashed_password = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
+        role_statement = select(Roles).where(Roles.team_id == team.id, Roles.name == 'member')
+        role = session.exec(role_statement).first()
+        new_user = User(
+            email = req.email,
+            password=hashed_password,
+            first_name=req.first_name,
+            middle_name=req.middle_name,
+            last_name=req.last_name,
+            suffix=req.last_name,
+            team_id=team.id,
+            role_id=role.id,
+            created_at=datetime.now()
+        )
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        #create token
+        res = JSONResponse({"Success": f"New user from {team.name} has been created"}, status_code=status.HTTP_201_CREATED)
+        user_json = json.loads(UserTokenPayload.model_validate(new_user).model_dump_json())
+        token = create_token(user_json)
+        res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
+
+        return res
+    return JSONResponse({'Error':'Error on member signup check'}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @router.post('/login')
 async def login(req:LoginUser):

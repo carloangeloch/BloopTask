@@ -3,6 +3,7 @@ from fastapi import Depends
 
 from models.team import Team
 from models.user import User
+from models.project import Project
 
 from lib.db import engine
 
@@ -26,3 +27,13 @@ def get_user_by_email(email: str, session: Session):
     statement = select(User).where(User.email == email)
     user = session.exec(statement).first()
     return user
+
+def get_project_by_teamid_pid(teamid:int, pid: int, session: Session):
+    """
+        Returns User model result using email\n
+        team id = team.id \n
+        pid = project_id
+    """
+    project_statement = select(Project).where(Project.team_id == teamid, Project.id == pid)
+    project = session.exec(project_statement).first()
+    return project

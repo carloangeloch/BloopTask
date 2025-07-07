@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from lib.db import engine, create_tables
 from contextlib import asynccontextmanager
 
-from routers import auth, project
+from routers import auth, project, tasklist
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,3 +21,4 @@ async def start_app():
 
 app.include_router(auth.router, prefix='/api/auth', tags=['auth'])
 app.include_router(project.router, prefix='/api/project', tags=['project'])
+app.include_router(tasklist.router, prefix='/api/tasklist', tags=['tasklist'])

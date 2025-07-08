@@ -4,7 +4,8 @@ class CreateTasklist (BaseModel):
     title: str
     description: str
 
-class GetAllTasklist(BaseModel):
+class GetTasklist(BaseModel):
+    id: int
     project_id: int
     title: str
     description: str

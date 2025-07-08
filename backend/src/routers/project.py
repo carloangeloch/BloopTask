@@ -54,7 +54,7 @@ async def create_project(team_id:str, req: Request,  data: CreateProject, sessio
     except:
         return JSONResponse({"Error":"Error on creating project"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@router.get('/all/{team_id}', response_model=List[GetProjectList])
+@router.get('/all/{team_id}')
 async def get_projects(team_id:str, req: Request, session: Session = Depends(get_session)):
     try:
         #check if user is verified 

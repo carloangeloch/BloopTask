@@ -9,7 +9,7 @@ import json
 from models.project import Project, Tasklist
 from models.team import Team, Roles
 from models.user import User
-from serializers.tasklist import CreateTasklist, GetAllTasklist, UpdateTasklist
+from serializers.tasklist import CreateTasklist, GetTasklist, UpdateTasklist
 
 router = APIRouter()
 
@@ -70,7 +70,7 @@ async def get_tasklists(team_id: str, pid: int, req: Request, session: Session =
         if not tasklists:
             return JSONResponse({"Error":"No tasklist available"}, status_code=status.HTTP_400_BAD_REQUEST)
         tasklist_json: List[Dict] = [
-            json.loads(GetAllTasklist.model_validate(tasklist).model_dump_json())
+            json.loads(GetTasklist.model_validate(tasklist).model_dump_json())
             for tasklist in tasklists
         ]
         return JSONResponse(tasklist_json, status_code=status.HTTP_200_OK)
@@ -96,7 +96,7 @@ async def get_tasklist(team_id: str, pid: int, tlid: int, req: Request, session:
         tasklist = session.exec(tasklist_statement).first()
         if not tasklist:
             return JSONResponse({"Error":"No tasklist available"}, status_code=status.HTTP_400_BAD_REQUEST)
-        tasklist_json= json.loads(GetAllTasklist.model_validate(tasklist).model_dump_json())
+        tasklist_json= json.loads(GetTasklist.model_validate(tasklist).model_dump_json())
         return JSONResponse(tasklist_json, status_code=status.HTTP_200_OK)
     except:
         return JSONResponse({"Error":"Error on getting single project tasklist"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -152,5 +152,6 @@ async def delete_tasklist(team_id: str, pid: int, tlid: int, req: Request, sessi
             return JSONResponse({"Error":"No tasklist available"}, status_code=status.HTTP_400_BAD_REQUEST)
         session.delete(tasklist)
         session.commit()
+        return JSONResponse({"Success":"Tasklist has been deleted"}, status_code=status.HTTP_202_ACCEPTED)
     except:
         return JSONResponse({"Error":"Error on deletting tasklist"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
+from .link import UserTeamRoleLink
 
 if TYPE_CHECKING:
     from .user import User
@@ -13,14 +14,14 @@ class Team(SQLModel, table=True):
     created_at: datetime = Field(default=datetime.now())
 
     #cascades
-    roles: List["Roles"] = Relationship(back_populates="team", cascade_delete=True)
-    user: List["User"] = Relationship(back_populates='team', cascade_delete=True)
+    user_link: List["UserTeamRoleLink"] = Relationship(back_populates='team', cascade_delete=True)
+    role : List['Roles'] = Relationship(back_populates='team', cascade_delete=True)
     project: List["Project"] = Relationship(back_populates='team', cascade_delete=True)
 
 class Roles(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     name: str
-    team_id: int = Field(foreign_key='team.id')
+    team_id: Optional[int] = Field(foreign_key='team.id')
 
-    team: Optional["Team"] = Relationship(back_populates='roles')
-    user: Optional["User"] = Relationship(back_populates='roles')
+    user_team_link: List["UserTeamRoleLink"] = Relationship(back_populates='roles')
+    team: Optional['Team'] = Relationship(back_populates='role')  

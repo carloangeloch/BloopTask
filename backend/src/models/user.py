@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel,Field, Relationship
 from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
+from .link import UserTeamRoleLink
 
 if TYPE_CHECKING:
     from .team import Team, Roles
@@ -15,12 +16,9 @@ class User(SQLModel, table = True):
     middle_name: str
     last_name: str
     suffix: str
-    team_id: int = Field(foreign_key='team.id', default=None)
-    role_id: int = Field(foreign_key='roles.id', default=None)
     created_at: datetime = Field(default=datetime.now())
 
-    team: Optional["Team"] = Relationship(back_populates='user')
-    roles: Optional["Roles"] = Relationship(back_populates='user')
+    team_link: List["UserTeamRoleLink"] = Relationship(back_populates='user')
     #cascades
     project: List["Project"] = Relationship(back_populates="user", cascade_delete=True)
     task: List['Task'] = Relationship(back_populates='user', cascade_delete=True)

@@ -32,8 +32,6 @@ class UserTokenPayload(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    team_id: int
-    role_id: int
 
     model_config = ConfigDict(from_attributes=True)
     

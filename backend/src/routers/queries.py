@@ -1,7 +1,6 @@
 from sqlmodel import Session, select
-from fastapi import Depends
 
-from models.team import Team
+from models.team import Team, Roles
 from models.user import User
 from models.project import Project, Tasklist
 
@@ -45,3 +44,8 @@ def get_tasklist_by_tlid(tlid: int, session: Session):
     tasklist_statement = select(Tasklist).where(Tasklist.id == tlid)
     tasklist = session.exec(tasklist_statement).first()
     return tasklist
+
+def get_role_by_teamid_id(rid: int, teamid: int, session: Session):
+    role_statement = select(Roles).where(Roles.team_id == teamid, Roles.id == rid)
+    role = session.exec(role_statement).first()
+    return role

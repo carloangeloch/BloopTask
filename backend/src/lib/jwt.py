@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from time import time
 import os
 
+from lib.responses import create_response
+
 load_dotenv
 JWT_KEY = os.getenv('JWT_KEY')
 ALGORITHM = 'HS256'
@@ -21,9 +23,11 @@ def create_token(data: dict):
 
     
 def verify_token(token: str):
+    if not token:
+        raise ValueError('Unauthorized - No token found')
     try:
         payload = jwt.decode(token, JWT_KEY)
         return payload
     except JoseError:
-        print('Error on token verification')
-        return JoseError
+        print(JoseError)
+        raise TypeError('Unauthorized - Invalid token')

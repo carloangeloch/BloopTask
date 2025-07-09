@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Request, status, Depends
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Request, Depends
 from sqlmodel import Session, select, desc
 from datetime import datetime
 import json
@@ -10,7 +8,6 @@ from lib.jwt import verify_token
 from .queries import get_session, get_user_by_email, get_tasklist_by_tlid
 from lib.responses import create_response
 from models.project import Task
-from models.user import User
 from serializers.task import CreateTask, GetTasks, UpdateTask
 router = APIRouter()
 
@@ -18,7 +15,7 @@ router = APIRouter()
 
 @router.get('/up')
 async def task_up():
-    return JSONResponse({"success":"task API working"}, status_code=status.HTTP_200_OK)
+    return create_response('success', 'Task API working', 200)
 
 @router.post('/create/{tlid}')
 async def create_task(tlid: int, req: Request, data: CreateTask, session: Session = Depends(get_session)):
@@ -52,8 +49,13 @@ async def create_task(tlid: int, req: Request, data: CreateTask, session: Sessio
         session.refresh(new_task)
 
         return create_response('success', f'New task on {tasklist.id} has been created', 201)
-    except:
-        return create_response('error', 'Error on creating task', 500)
+    except TypeError as te:
+        return create_response('error', str(te), 401)
+    except ValueError as ve:
+        return create_response('error', str(ve), 401)
+    except Exception as e:
+       print(e)
+       return create_response('error', 'Error on creating task', 500)
     
 @router.get('/all/{tlid}')
 async def get_tasks(tlid: int, req: Request, session: Session = Depends(get_session)):
@@ -76,8 +78,13 @@ async def get_tasks(tlid: int, req: Request, session: Session = Depends(get_sess
             for task in tasks
         ]
         return create_response('data', task_json, 200)
-    except:
-        return create_response('error', 'Error on getting all task', 500)
+    except TypeError as te:
+        return create_response('error', str(te), 401)
+    except ValueError as ve:
+        return create_response('error', str(ve), 401)
+    except Exception as e:
+       print(e)
+       return create_response('error', 'Error on getting all task', 500)
     
 @router.get('/{tid}/{tlid}')
 async def get_task(tid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
@@ -98,8 +105,13 @@ async def get_task(tid: int, tlid: int, req: Request, session: Session = Depends
             return create_response('error', 'No data found', 404)
         task_json = json.loads(GetTasks.model_validate(task).model_dump_json())
         return create_response('data', task_json, 200)
-    except:
-        return create_response('error', 'Error on getting a task', 500)
+    except TypeError as te:
+        return create_response('error', str(te), 401)
+    except ValueError as ve:
+        return create_response('error', str(ve), 401)
+    except Exception as e:
+       print(e)
+       return create_response('error', 'Error on getting a task', 500)
     
 @router.put('/{tid}/{tlid}')
 async def update_task(tid: int, tlid: int, req: Request, data: UpdateTask, session: Session = Depends(get_session)):
@@ -130,8 +142,13 @@ async def update_task(tid: int, tlid: int, req: Request, data: UpdateTask, sessi
         session.commit()
         session.refresh(task)
         return create_response('success', f'Task {task.id} on tasklist {tasklist.id} has beed updated', 202)
-    except:
-        return create_response('error', 'Error on updating task', 500)
+    except TypeError as te:
+        return create_response('error', str(te), 401)
+    except ValueError as ve:
+        return create_response('error', str(ve), 401)
+    except Exception as e:
+       print(e)
+       return create_response('error', 'Error on updating task', 500)
     
 @router.delete('/{tid}/{tlid}')
 async def delete_task(tid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
@@ -153,5 +170,10 @@ async def delete_task(tid: int, tlid: int, req: Request, session: Session = Depe
         session.delete(task)
         session.commit()
         return create_response('success', f'Task {tid} in tasklist {tlid} has been deleted', 202)
-    except:
-        return create_response('error', 'Error on deleting task', 500)
+    except TypeError as te:
+        return create_response('error', str(te), 401)
+    except ValueError as ve:
+        return create_response('error', str(ve), 401)
+    except Exception as e:
+       print(e)
+       return create_response('error', 'Error on deleting task', 500)

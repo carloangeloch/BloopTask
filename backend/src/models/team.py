@@ -21,7 +21,7 @@ class Team(SQLModel, table=True):
 class Roles(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     name: str
-    team_id: Optional[int] = Field(foreign_key='team.id')
+    team_id: Optional[int] = Field(foreign_key='team.id', default=None)
 
     user_team_link: List["UserTeamRoleLink"] = Relationship(back_populates='roles')
     team: Optional['Team'] = Relationship(back_populates='role')  

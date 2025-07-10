@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlmodel import Session, select
 import bcrypt
 from datetime import datetime
@@ -27,8 +27,10 @@ async def team_check(req:GetTeam, session: Session = Depends(get_session)):
         statement = select(Team).where(Team.urlname.contains(lookup_string))
         team = session.exec(statement).first()
         if team:
-            return create_response('error', 'Team name exists', 400)
+            raise HTTPException(400,'Team name exists')
         return create_response('success', 'Team name available', 200)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on team check', 500)
@@ -38,7 +40,7 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
     try:
         user = get_user_by_email(req.email, session)
         if user:
-            return create_response('error', 'Email already exists', 400)
+            raise HTTPException(400,'Email already exists')
         hashed_password=bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
         team_url = req.team_name.lower().strip().replace(' ','-') + '-' + os.urandom(8).hex()
         
@@ -46,14 +48,16 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         team_statement = select(Team).where(Team.urlname.contains(lookup_string))
         team = session.exec(team_statement).first()
         if team:
-            return create_response('error', 'Team name exists', 400)
+            raise HTTPException(400,'Team name exists')
         new_team = Team(
             name = req.team_name,
             urlname=team_url,
-            created_at=datetime.now()
+            created_at=datetime.now(),
+            is_active=True
         )
         session.add(new_team)
         session.commit()
+        session.refresh(new_team)
 
         new_role_admin = Roles(
             name = UserRoleEnum.ADMIN.value,
@@ -70,6 +74,7 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         
         session.add_all([new_role_admin, new_role_member, new_role_mod])
         session.commit() 
+        session.refresh(new_role_admin) 
         
         new_user = User(
             email = req.email,
@@ -82,6 +87,7 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         )
         session.add(new_user)
         session.commit()
+        session.refresh(new_user)
 
         new_link = UserTeamRoleLink(
             user = new_user,
@@ -90,24 +96,20 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         )
         session.add(new_link)
         session.commit()
-
-        session.refresh(new_user)
-        session.refresh(new_team)
-        session.refresh(new_role_admin) 
-        session.refresh(new_role_mod) 
-        session.refresh(new_role_member)
-        session.refresh(new_link)
-
+        
         res = create_response('success', "User, team and role has been created", 201)
         user_json = json.loads(UserTokenPayload.model_validate(new_user).model_dump_json())
         token = create_token(user_json)
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
         return res
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on new user signup', 500)
 
-#Deprecated: Instead, create new user, then ask for invitation from the team.
+#TODOD: (to be remove)
+# Deprecated: Instead, create new user, then ask for invitation from the team.
 # @router.post('/team/member/signup/{team_id}')
 # async def member_signup(team_id: str, req:GetMemberUserData, session: Session = Depends(get_session)):
 #     try:
@@ -160,18 +162,20 @@ async def login(req:LoginUser, session: Session = Depends(get_session)):
     try:
         user = get_user_by_email(req.email, session)
         if not user:
-            return create_response('error', 'Invalid Credentials', 400)
+            raise HTTPException(400, 'Invalid Credentials')
         #check if not user 
         check_pwd = bcrypt.checkpw(req.password.encode('utf-8'), user.password.encode('utf-8'))
         #check if password incorrent
         if not check_pwd:
-            return create_response('Error','Invalid Credentials', 400)
+            raise HTTPException(400,'Invalid Credentials')
         user_json = json.loads(UserTokenPayload.model_validate(user).model_dump_json())
         res = create_response('success',"User logged in", 200)
         #create token
         token = create_token(user_json)
         res.set_cookie('jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
         return res
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on user login', 500)
@@ -184,12 +188,11 @@ async def logout():
     
 @router.post('/check')
 async def check(req: Request):
-    token = req.cookies.get('jwt')
-    if not token:
-        return create_response('error',  "Unauthorized - No token found", 400)
     try:
-        payload = verify_token(token)
+        payload = verify_token(req.cookies.get('jwt'))
         return create_response('data', payload, 200)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on check auth', 500)

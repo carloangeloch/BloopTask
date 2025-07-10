@@ -12,6 +12,7 @@ class Team(SQLModel, table=True):
     name: str
     urlname: str
     created_at: datetime = Field(default=datetime.now())
+    is_active: bool
 
     #cascades
     user_link: List["UserTeamRoleLink"] = Relationship(back_populates='team', cascade_delete=True)

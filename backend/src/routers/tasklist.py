@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlmodel import Session, select, desc
-from .queries import get_session, get_user_by_email, get_team_by_urlname, get_project_by_teamid_pid, get_role_by_teamid_id
+from .queries import get_session, get_user_by_email, get_team_by_urlname, get_project_by_teamid_pid, get_role_by_teamid_roletype
 from lib.jwt import verify_token
 from typing import List, Dict
 import json
 
 from models.project import Tasklist
+from models.link import UserTeamRoleLink
 from serializers.tasklist import CreateTasklist, GetTasklist, UpdateTasklist
 from lib.responses import create_response
 
@@ -19,27 +20,25 @@ async def tasklist_up():
 @router.post('/create/{pid}/{team_id}')
 async def create_tasklist(team_id: str,pid: int ,req: Request, data: CreateTasklist, session: Session = Depends(get_session)):
     try:
-        #check if user is verified 
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Invalid User', 400)
-        #check team based on team id
+            raise HTTPException(401, 'Invalid User')
+        #check if team exists
         team = get_team_by_urlname(team_id, session)
         if not team:
-            return create_response('error', 'No team found', 404)
-        #check if team is token verified
-        if payload['team_id'] != team.id:
-            return create_response('error', 'Invalid user', 401)
+            raise HTTPException(404, 'No team found')
+        #validate if user is not member and is in team
+        role = get_role_by_teamid_roletype(team.id, 'member', session)
+        user_team = session.exec(select(UserTeamRoleLink).where(UserTeamRoleLink.user == user, UserTeamRoleLink.team == team , UserTeamRoleLink.roles == role)).first()
+        if user_team:
+            raise HTTPException(403, 'Acces Denied')
         project = get_project_by_teamid_pid(team.id, pid, session)
-        role = get_role_by_teamid_id(payload['role_id'],team.id, session)
-        if role.name == 'member':
-            return create_response('error', 'Access Denied', 401)
         if not project:
-            return create_response('error', 'No project found', 404)
+            raise HTTPException(404, 'No project found')
         tasklist_statement = select(Tasklist).where(Tasklist.project_id == pid).order_by(desc(Tasklist.position))
-        tasklist = session.exec(tasklist_statement).first()
-              
+        tasklist = session.exec(tasklist_statement).first()   
         new_tasklist = Tasklist(
               project_id=pid,
               title= data.title,
@@ -49,12 +48,9 @@ async def create_tasklist(team_id: str,pid: int ,req: Request, data: CreateTaskl
         
         session.add(new_tasklist)
         session.commit()
-        session.refresh(new_tasklist)
         return create_response('success', f"New Tasklist is created on Project {project.name} at team {team.name}", 201)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on creating project tasklist', 500)
@@ -63,34 +59,32 @@ async def create_tasklist(team_id: str,pid: int ,req: Request, data: CreateTaskl
 @router.get('/all/{pid}/{team_id}')
 async def get_tasklists(team_id: str, pid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #check if user is verified 
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Invalid User', 400)
-        
-        #check team based on team id
+            raise HTTPException(401, 'Invalid User')
+        #check if team exists
         team = get_team_by_urlname(team_id, session)
         if not team:
-            return create_response('error', 'No team found', 404)
-        #check if team is token verified
-        if payload['team_id'] != team.id:
-            return create_response('error', 'Invalid user', 401)
+            raise HTTPException(404, 'No team found')
+        #validate if user is not member and is in team
+        user_team = session.exec(select(UserTeamRoleLink).where(UserTeamRoleLink.user == user, UserTeamRoleLink.team == team)).first()
+        if not user_team:
+            raise HTTPException(403, 'Acces Denied')
         project = get_project_by_teamid_pid(team.id, pid, session)
         if not project:
-            return create_response('error', 'No project found', 404)
-        tasklists = session.exec(select(Tasklist)).all()
+            raise HTTPException(404, 'No project found')
+        tasklists = session.exec(select(Tasklist).order_by(Tasklist.position)).all()
         if not tasklists:
-            return create_response('error', 'No tasklist found', 404)
+            raise HTTPException(404, 'No tasklist found')
         tasklist_json: List[Dict] = [
             json.loads(GetTasklist.model_validate(tasklist).model_dump_json())
             for tasklist in tasklists
         ]
         return create_response('data', tasklist_json, 200)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on getting all project tasklist', 500)
@@ -98,31 +92,29 @@ async def get_tasklists(team_id: str, pid: int, req: Request, session: Session =
 @router.get('/{tlid}/{pid}/{team_id}')
 async def get_tasklist(team_id: str, pid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #check if user is verified 
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Invalid User', 400)
-        #check team based on team id
+            raise HTTPException(401, 'Invalid User')
+        #check if team exists
         team = get_team_by_urlname(team_id, session)
         if not team:
-            return create_response('error', 'No team found', 404)
-        #check if team is token verified
-        if payload['team_id'] != team.id:
-            return create_response('error', 'Invalid user', 401)
+            raise HTTPException(404, 'No team found')
+        #validate if user is not member and is in team
+        user_team = session.exec(select(UserTeamRoleLink).where(UserTeamRoleLink.user == user, UserTeamRoleLink.team == team)).first()
+        if not user_team:
+            raise HTTPException(403, 'Acces Denied')
         project = get_project_by_teamid_pid(team.id, pid, session)
         if not project:
-            return create_response('error', 'No project found', 404)
-        tasklist_statement = select(Tasklist).where(Tasklist.id == tlid)
-        tasklist = session.exec(tasklist_statement).first()
+            raise HTTPException(404, 'No project found')
+        tasklist = session.exec(select(Tasklist)).first()
         if not tasklist:
-            return create_response('error', 'No tasklist found', 404)
+            raise HTTPException(404, 'No tasklist found')
         tasklist_json= json.loads(GetTasklist.model_validate(tasklist).model_dump_json())
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
         return create_response('data', tasklist_json, 200)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on getting single project tasklist', 500)
@@ -131,39 +123,57 @@ async def get_tasklist(team_id: str, pid: int, tlid: int, req: Request, session:
 @router.put('/{tlid}/{pid}/{team_id}')
 async def update_tasklist(team_id: str, pid: int, tlid: int, data: UpdateTasklist, req:Request, session: Session = Depends(get_session)):
     try:
-        #check if user is verified 
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Invalid User', 400)
-        #check team based on team id
+            raise HTTPException(401, 'Invalid User')
+        #check if team exists
         team = get_team_by_urlname(team_id, session)
         if not team:
-            return create_response('error', 'No team found', 404)
-        #check if team is token verified
-        if payload['team_id'] != team.id:
-            return create_response('error', 'Invalid user', 401)
-        role = get_role_by_teamid_id(payload['role_id'],team.id, session)
-        if role.name == 'member':
-            return create_response('error', 'Access Denied', 401)
+            raise HTTPException(404, 'No team found')
+        #validate if user is not member and is in team
+        role = get_role_by_teamid_roletype(team.id, 'member', session)
+        user_team = session.exec(select(UserTeamRoleLink).where(UserTeamRoleLink.user == user, UserTeamRoleLink.team == team, UserTeamRoleLink.roles == role)).first()
+        if user_team:
+            raise HTTPException(403, 'Acces Denied')
         project = get_project_by_teamid_pid(team.id, pid, session)
         if not project:
-            return create_response('error', 'No project found', 404)
-        tasklist_statement = select(Tasklist).where(Tasklist.id == tlid)
-        tasklist = session.exec(tasklist_statement).first()
+            raise HTTPException(404, 'No project found')
+        tasklist = session.exec(select(Tasklist).where(Tasklist.id == tlid)).first()
+        print('tasklist', tasklist)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 404)
+            raise HTTPException(404, 'No tasklist found')
+        current_position = tasklist.position 
+        new_position = data.position
+        if(current_position > new_position):
+            tasklists_shift = session.exec(
+                select(Tasklist).where(
+                    Tasklist.position >= new_position,
+                    Tasklist.position < current_position,
+                    Tasklist.project_id == project.id
+            )).all()
+            for t in tasklists_shift:
+                t.position += 1
+                session.add(t)
+        elif (current_position < new_position):
+            tasklists_shift = session.exec(
+                select(Tasklist).where(
+                    Tasklist.position <= new_position,
+                    Tasklist.position > current_position,
+                    Tasklist.project_id == project.id
+            )).all()
+            for t in tasklists_shift:
+                t.position -= 1
+                session.add(t)
+        tasklist.position = data.position
         tasklist.title = data.title
         tasklist.description = data.description
-        tasklist.position = data.position
         session.add(tasklist)
         session.commit()
-        session.refresh(tasklist)
         return create_response('success', f"Successfully updated tasklist {tlid} on project {pid} on team {team.name}", 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on updating tasklist', 500)
@@ -171,35 +181,40 @@ async def update_tasklist(team_id: str, pid: int, tlid: int, data: UpdateTasklis
 @router.delete('/{tlid}/{pid}/{team_id}')
 async def delete_tasklist(team_id: str, pid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #check if user is verified 
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Invalid User', 400)
-        #check team based on team id
+            raise HTTPException(401, 'Invalid User')
+        #check if team exists
         team = get_team_by_urlname(team_id, session)
         if not team:
-            return create_response('error', 'No team found', 404)
-        #check if team is token verified
-        if payload['team_id'] != team.id:
-            return create_response('error', 'Invalid user', 401)
-        role = get_role_by_teamid_id(payload['role_id'],team.id, session)
-        if role.name == 'member':
-            return create_response('error', 'Access Denied', 401)
+            raise HTTPException(404, 'No team found')
+        #validate if user is not member and is in team
+        role = get_role_by_teamid_roletype(team.id, 'member', session)
+        user_team = session.exec(select(UserTeamRoleLink).where(UserTeamRoleLink.user == user, UserTeamRoleLink.team == team, UserTeamRoleLink.roles == role)).first()
+        if user_team:
+            raise HTTPException(403, 'Acces Denied')
         project = get_project_by_teamid_pid(team.id, pid, session)
         if not project:
-            return create_response('error', 'No project found', 404)
-        tasklist_statement = select(Tasklist).where(Tasklist.id == tlid)
-        tasklist = session.exec(tasklist_statement).first()
+            raise HTTPException(404, 'No project found')
+        tasklist = session.exec(select(Tasklist).where(Tasklist.id == tlid)).first()
         if not tasklist:
-            return create_response('error', 'No tasklist found', 404)
+            raise HTTPException(404, 'No tasklist found')
+        #once task list is deleted, all preceeding positions should be move back
+        tasklist_shift = session.exec(select(Tasklist).where(
+            Tasklist.position > tasklist.position ,
+            Tasklist.project_id == project.id
+        )).all()
+        for t in tasklist_shift:
+            t.position -= 1
+            session.commit()
+
         session.delete(tasklist)
         session.commit()
         return create_response('success', 'Tasklist has been deleted', 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on deleting tasklist', 500)

@@ -1,10 +1,9 @@
 from authlib.jose import jwt, JoseError
-from fastapi import Request as req
+from fastapi import HTTPException
 from dotenv import load_dotenv
 from time import time
 import os
 
-from lib.responses import create_response
 
 load_dotenv
 JWT_KEY = os.getenv('JWT_KEY')
@@ -24,10 +23,10 @@ def create_token(data: dict):
     
 def verify_token(token: str):
     if not token:
-        raise ValueError('Unauthorized - No token found')
+        raise HTTPException(401,'Unauthorized - No token found')
     try:
         payload = jwt.decode(token, JWT_KEY)
         return payload
     except JoseError:
         print(JoseError)
-        raise TypeError('Unauthorized - Invalid token')
+        raise HTTPException(401,'Unauthorized - Invalid token')

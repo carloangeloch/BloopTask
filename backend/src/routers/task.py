@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlmodel import Session, select, desc
 from datetime import datetime
 import json
@@ -9,9 +9,10 @@ from .queries import get_session, get_user_by_email, get_tasklist_by_tlid
 from lib.responses import create_response
 from models.project import Task
 from serializers.task import CreateTask, GetTasks, UpdateTask
+
 router = APIRouter()
 
-
+#TODO: update task and task comment
 
 @router.get('/up')
 async def task_up():
@@ -20,18 +21,19 @@ async def task_up():
 @router.post('/create/{tlid}')
 async def create_task(tlid: int, req: Request, data: CreateTask, session: Session = Depends(get_session)):
     try:
-        #verify user
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
-        if not payload: 
-            return create_response('error','Unautorized - no token found', 401)
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'No user found', 400)
+            raise HTTPException(401, 'Invalid User')
         tasklist = get_tasklist_by_tlid(tlid, session)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 400)
-        task_statement = select(Task).where(Task.tasklist_id == tasklist.id).order_by(desc(Task.position))
-        task = session.exec(task_statement).first()
+            raise HTTPException(400, 'No tasklist found')
+        
+        task = session.exec(select(Task).where(
+                Task.tasklist_id == tasklist.id)
+                .order_by(desc(Task.position)
+            )).first()
         new_task = Task(
             tasklist_id= tasklist.id,
             title= data.title,
@@ -46,13 +48,9 @@ async def create_task(tlid: int, req: Request, data: CreateTask, session: Sessio
         )
         session.add(new_task)
         session.commit()
-        session.refresh(new_task)
-
         return create_response('success', f'New task on {tasklist.id} has been created', 201)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
        print(e)
        return create_response('error', 'Error on creating task', 500)
@@ -60,28 +58,24 @@ async def create_task(tlid: int, req: Request, data: CreateTask, session: Sessio
 @router.get('/all/{tlid}')
 async def get_tasks(tlid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #verify user
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
-        if not payload: 
-            return create_response('error','Unautorized - no token found', 401)
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'No user found', 400)
+            raise HTTPException(401, 'Invalid User')
         tasklist = get_tasklist_by_tlid(tlid, session)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 400)
-        task_statement = select(Task).where(Task.tasklist_id == tasklist.id)
-        tasks = session.exec(task_statement).all()
-        print(tasks)
+            raise HTTPException(400, 'No tasklist found')
+        tasks = session.exec(select(Task).where(Task.tasklist_id == tasklist.id)).all()
+        if not tasks:
+            raise HTTPException(404, 'No task found')
         task_json: List[Dict] = [
             json.loads(GetTasks.model_validate(task).model_dump_json())
             for task in tasks
         ]
         return create_response('data', task_json, 200)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
        print(e)
        return create_response('error', 'Error on getting all task', 500)
@@ -89,26 +83,24 @@ async def get_tasks(tlid: int, req: Request, session: Session = Depends(get_sess
 @router.get('/{tid}/{tlid}')
 async def get_task(tid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #verify user
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
-        if not payload: 
-            return create_response('error','Unautorized - no token found', 401)
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'No user found', 400)
+            raise HTTPException(401, 'Invalid User')
         tasklist = get_tasklist_by_tlid(tlid, session)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 400)
-        task_statement = select(Task).where(Task.tasklist_id == tasklist.id, Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(400, 'No tasklist found')
+        task = session.exec(select(Task).where(
+                Task.tasklist_id == tasklist.id,
+                Task.id == tid
+            )).first()
         if not task:
-            return create_response('error', 'No data found', 404)
+            raise HTTPException(404, 'No data found')
         task_json = json.loads(GetTasks.model_validate(task).model_dump_json())
         return create_response('data', task_json, 200)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
        print(e)
        return create_response('error', 'Error on getting a task', 500)
@@ -116,20 +108,42 @@ async def get_task(tid: int, tlid: int, req: Request, session: Session = Depends
 @router.put('/{tid}/{tlid}')
 async def update_task(tid: int, tlid: int, req: Request, data: UpdateTask, session: Session = Depends(get_session)):
     try:
-        #verify user
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
-        if not payload: 
-            return create_response('error','Unautorized - no token found', 401)
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'No user found', 400)
+            raise HTTPException(401, 'Invalid User')
         tasklist = get_tasklist_by_tlid(tlid, session)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 400)
-        task_statement = select(Task).where(Task.tasklist_id == tasklist.id, Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(400, 'No tasklist found')
+        task = session.exec(select(Task).where(
+                Task.tasklist_id == tasklist.id,
+                Task.id == tid,
+                Task.created_by == user.id
+            )).first()
         if not task:
-            return create_response('error', 'No data found', 404)
+            raise HTTPException(403, 'User is not the creator of the task')
+        
+        current_position = task.position
+        new_position = data.position
+        if current_position > new_position:
+            task_shift = session.exec(select(Task).where(
+                Task.position >= new_position,
+                Task.position < current_position,
+                Task.tasklist_id == tlid
+            )).all()
+            for t in task_shift:
+                t.position += 1
+                session.add(t)
+        elif current_position < new_position:
+            task_shift = session.exec(select(Task).where(
+                Task.position <= new_position,
+                Task.position > current_position,
+                Task.tasklist_id == tlid
+            )).all()
+            for t in task_shift:
+                t.position -= 1
+                session.add(t)
         task.title = data.title
         task.description = data.description
         task.assinged_to = data.assinged_to
@@ -137,15 +151,11 @@ async def update_task(tid: int, tlid: int, req: Request, data: UpdateTask, sessi
         task.due_date = data.due_date
         task.priority = data.priority
         task.position = data.position
-        
         session.add(task)
         session.commit()
-        session.refresh(task)
         return create_response('success', f'Task {task.id} on tasklist {tasklist.id} has beed updated', 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
        print(e)
        return create_response('error', 'Error on updating task', 500)
@@ -153,27 +163,34 @@ async def update_task(tid: int, tlid: int, req: Request, data: UpdateTask, sessi
 @router.delete('/{tid}/{tlid}')
 async def delete_task(tid: int, tlid: int, req: Request, session: Session = Depends(get_session)):
     try:
-        #verify user
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
-        if not payload: 
-            return create_response('error','Unautorized - no token found', 401)
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'No user found', 400)
+            raise HTTPException(401, 'Invalid User')
         tasklist = get_tasklist_by_tlid(tlid, session)
         if not tasklist:
-            return create_response('error', 'No tasklist found', 400)
-        task_statement = select(Task).where(Task.tasklist_id == tasklist.id, Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(400, 'No tasklist found')
+        task = session.exec(select(Task).where(
+                Task.tasklist_id == tasklist.id,
+                Task.id == tid,
+                Task.created_by == user.id
+            )).first()
         if not task:
-            return create_response('error', 'No data found', 404)
+            raise HTTPException(403, 'User is not the creator of the task')
+        
+        task_shift = session.exec(select(Task).where(
+            Task.position > task.position,
+            Task.tasklist_id == tlid
+        )).all()
+        for t in task_shift:
+            t.position -= 1
+            session.add(t)
         session.delete(task)
         session.commit()
         return create_response('success', f'Task {tid} in tasklist {tlid} has been deleted', 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
        print(e)
        return create_response('error', 'Error on deleting task', 500)

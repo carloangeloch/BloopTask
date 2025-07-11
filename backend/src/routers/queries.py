@@ -49,3 +49,8 @@ def get_role_by_teamid_id(rid: int, teamid: int, session: Session):
     role_statement = select(Roles).where(Roles.team_id == teamid, Roles.id == rid)
     role = session.exec(role_statement).first()
     return role
+
+def get_role_by_teamid_roletype(teamid: int, roletype: str, session: Session):
+    role_statement = select(Roles).where(Roles.team_id == teamid, Roles.name == roletype)
+    role = session.exec(role_statement).first()
+    return role

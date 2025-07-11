@@ -1,5 +1,6 @@
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from lib.db import engine, create_tables
 from contextlib import asynccontextmanager
 
@@ -11,8 +12,19 @@ async def lifespan(app: FastAPI):
     engine.begin()
     create_tables() 
 
-
 app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 
 @app.get("/up")

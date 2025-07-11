@@ -97,11 +97,13 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         session.add(new_link)
         session.commit()
         
-        res = create_response('success', "User, team and role has been created", 201)
         user_json = json.loads(UserTokenPayload.model_validate(new_user).model_dump_json())
         token = create_token(user_json)
+        del user_json['iat']
+        del user_json['exp']
+        res = create_response('data', user_json, 201)
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
-        return res
+        return 
     except HTTPException as h:
         return create_response('error', h.detail, h.status_code)
     except Exception as e:
@@ -169,9 +171,10 @@ async def login(req:LoginUser, session: Session = Depends(get_session)):
         if not check_pwd:
             raise HTTPException(400,'Invalid Credentials')
         user_json = json.loads(UserTokenPayload.model_validate(user).model_dump_json())
-        res = create_response('success',"User logged in", 200)
-        #create token
         token = create_token(user_json)
+        del user_json['iat']
+        del user_json['exp']
+        res = create_response('data',user_json, 200)
         res.set_cookie('jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
         return res
     except HTTPException as h:
@@ -190,6 +193,8 @@ async def logout():
 async def check(req: Request):
     try:
         payload = verify_token(req.cookies.get('jwt'))
+        del payload['iat']
+        del payload['exp']
         return create_response('data', payload, 200)
     except HTTPException as h:
         return create_response('error', h.detail, h.status_code)

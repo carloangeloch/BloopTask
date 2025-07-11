@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlmodel import Session, select
 from datetime import datetime
 import json
@@ -18,14 +18,14 @@ async def task_comment_up():
 @router.post('/create/{tid}')
 async def create_task_comment(tid: int, req: Request,data: CreateTaskComment, session: Session = Depends(get_session)):
     try:
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Unauthrized - No user found', 400)
-        task_statement = select(Task).where(Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(401, 'Invalid User')
+        task = session.exec( select(Task).where(Task.id == tid)).first()
         if not task:
-            return create_response('error', 'No task found', 400)
+            raise HTTPException(400,'No task found')
         new_comment = TaskComment(
             task_id = task.id,
             user_id = user.id,
@@ -34,12 +34,9 @@ async def create_task_comment(tid: int, req: Request,data: CreateTaskComment, se
         )
         session.add(new_comment)
         session.commit()
-        session.refresh(new_comment)
         return create_response('success', f'New comment has been created by {user.first_name}', 201)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on creating task comment', 500)
@@ -47,25 +44,24 @@ async def create_task_comment(tid: int, req: Request,data: CreateTaskComment, se
 @router.get('/all/{tid}')
 async def get_comments(tid: int, req: Request, session: Session = Depends(get_session)):
     try:
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Unauthrized - No user found', 400)
-        task_statement = select(Task).where(Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(401, 'Invalid User')
+        task = session.exec(select(Task).where(Task.id == tid)).first()
         if not task:
-            return create_response('error', 'No task found', 400)
-        comment_statement = select(TaskComment).where(TaskComment.task_id == tid)
-        comments = session.exec(comment_statement).all()
+            raise HTTPException(400, 'No task found')
+        comments = session.exec(select(TaskComment).where(
+                TaskComment.task_id == tid
+            )).all()
         comments_json: List[Dict] = [
             json.loads(GetComment.model_validate(comment).model_dump_json())
             for comment in comments
         ]
         return create_response('data', comments_json, 200)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on getting all task comment', 500)
@@ -73,22 +69,19 @@ async def get_comments(tid: int, req: Request, session: Session = Depends(get_se
 @router.get('/{tcid}/{tid}')
 async def get_comment(tcid: int, tid: int, req: Request, session: Session = Depends(get_session)):
     try:
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Unauthrized - No user found', 400)
-        task_statement = select(Task).where(Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(401, 'Invalid User')
+        task = session.exec(select(Task).where(Task.id == tid)).first()
         if not task:
-            return create_response('error', 'No task found', 400)
-        comment_statement = select(TaskComment).where(TaskComment.id == tcid)
-        comments = session.exec(comment_statement).first()
+            raise HTTPException(400, 'No task found')
+        comments = session.exec(select(TaskComment).where(TaskComment.id == tcid)).first()
         comments_json = json.loads(GetComment.model_validate(comments).model_dump_json())
         return create_response('data', comments_json, 200)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on getting single task comment', 500)
@@ -96,28 +89,28 @@ async def get_comment(tcid: int, tid: int, req: Request, session: Session = Depe
 @router.put('/{tcid}/{tid}')
 async def update_comment(tcid: int, tid: int, req: Request, data: CreateTaskComment , session: Session = Depends(get_session)):
     try:
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Unauthrized - No user found', 400)
-        task_statement = select(Task).where(Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(401, 'Invalid User')
+        task = session.exec(select(Task).where(Task.id == tid)).first()
         if not task:
-            return create_response('error', 'No task found', 400)
-        comment_statement = select(TaskComment).where(TaskComment.id == tcid, TaskComment.user_id == user.id)
-        comment = session.exec(comment_statement).first()
+            raise HTTPException(400, 'No task found')
+        comment = session.exec(select(TaskComment).where(
+                TaskComment.id == tcid,
+                TaskComment.task_id == task.id,
+                TaskComment.user_id == user.id
+            )).first()
         if not comment:
-            return create_response('error', 'Access Denied', 400)
+            raise HTTPException(400, 'Access Denied')
         comment.comment = data.comment
 
         session.add(comment)
         session.commit()
-        session.refresh(comment)
         return create_response('success', f'Comment on task {task.id} has been updated', 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on updating task comment', 500)
@@ -125,25 +118,26 @@ async def update_comment(tcid: int, tid: int, req: Request, data: CreateTaskComm
 @router.delete('/{tcid}/{tid}')
 async def delete_comment(tcid: int, tid: int, req: Request, session: Session = Depends(get_session)):
     try:
+        #check if user token is same with the registered user
         payload = verify_token(req.cookies.get('jwt'))
         user = get_user_by_email(payload['email'], session)
         if not user:
-            return create_response('error', 'Unauthrized - No user found', 400)
-        task_statement = select(Task).where(Task.id == tid)
-        task = session.exec(task_statement).first()
+            raise HTTPException(401, 'Invalid User')
+        task = session.exec(select(Task).where(Task.id == tid)).first()
         if not task:
-            return create_response('error', 'No task found', 400)
-        comment_statement = select(TaskComment).where(TaskComment.id == tcid, TaskComment.user_id == user.id)
-        comment = session.exec(comment_statement).first()
+            raise HTTPException(400, 'No task found')
+        comment = session.exec(select(TaskComment).where(
+                TaskComment.id == tcid,
+                TaskComment.task_id == task.id,
+                TaskComment.user_id == user.id
+            )).first()
         if not comment:
-            return create_response('error', 'Access Denied', 400)
+            raise HTTPException(400, 'Access Denied')
         session.delete(comment)
         session.commit()
         return create_response('success', f'Comment on task {task.id} has been deleted', 202)
-    except TypeError as te:
-        return create_response('error', str(te), 401)
-    except ValueError as ve:
-        return create_response('error', str(ve), 401)
+    except HTTPException as h:
+        return create_response('error', h.detail, h.status_code)
     except Exception as e:
         print(e)
         return create_response('error', 'Error on deleting task comment', 500)

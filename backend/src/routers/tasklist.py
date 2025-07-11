@@ -157,7 +157,6 @@ async def update_tasklist(team_id: str, pid: int, tlid: int, data: UpdateTasklis
                 t.position += 1
                 session.add(t)
         elif (current_position < new_position):
-            print('moving down')
             tasklists_shift = session.exec(
                 select(Tasklist).where(
                     Tasklist.position <= new_position,
@@ -207,7 +206,6 @@ async def delete_tasklist(team_id: str, pid: int, tlid: int, req: Request, sessi
             Tasklist.position > tasklist.position ,
             Tasklist.project_id == project.id
         )).all()
-        print(tasklist_shift)
         for t in tasklist_shift:
             t.position -= 1
             session.commit()

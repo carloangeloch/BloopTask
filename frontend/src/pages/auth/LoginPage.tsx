@@ -1,26 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
+import { useLogin } from "../../hooks/auth";
+import { emailValidate } from "../../utils/emailValidate";
 
 const LoginPage = () => {
+  const { mutate: login } = useLogin();
   const defaultLoginData = {
     email: "",
     password: "",
   };
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState(defaultLoginData);
-  const { login } = useAuthStore();
 
   const navigate = useNavigate();
 
   const handleLogin = () => {
     try {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (emailRegex.test(loginData.email) === false)
-        throw new Error("not a valid email");
+      const isEmail = emailValidate(loginData.email);
+      if (!isEmail) throw new Error("not a valid email");
       login(loginData);
-      navigate("/");
+      navigate("/home");
     } catch (error) {
       return toast.error(
         error instanceof Error ? error.message : String(error)

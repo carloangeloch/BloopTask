@@ -99,11 +99,13 @@ async def signup(req:GetTeamUserData, session: Session = Depends(get_session)):
         
         user_json = json.loads(UserTokenPayload.model_validate(new_user).model_dump_json())
         token = create_token(user_json)
+        print('---- pre deletion token', token)
         del user_json['iat']
         del user_json['exp']
+        print('---- post deletion token', token)
         res = create_response('data', user_json, 201)
         res.set_cookie(key='jwt',value=token, httponly=True, secure=True, samesite='strict', max_age=7*24*60*60)
-        return 
+        return res
     except HTTPException as h:
         return create_response('error', h.detail, h.status_code)
     except Exception as e:
@@ -185,7 +187,7 @@ async def login(req:LoginUser, session: Session = Depends(get_session)):
 
 @router.post('/logout')
 async def logout():
-    res = create_response('success', "User logged out", 200)
+    res = create_response('success', "Successfully logged out", 200)
     res.delete_cookie('jwt')
     return res
     

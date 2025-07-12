@@ -26,9 +26,9 @@ def create_response(type: Literal['data', 'error', 'success'] = 'success', messa
     try:
         type_text = {}
         if type == 'error':
-            type_text = {'Error': message}
+            type_text = {'error': message}
         elif type == 'success':
-            type_text = {'Success': message}
+            type_text = {'success': message}
 
         return JSONResponse(message if type == 'data' else type_text, status_code=status_code)
     except TypeError as e:

@@ -1,7 +1,7 @@
 type DropboxImageType = {
   src: string;
   alt: string;
-  className: string;
+  className?: string;
 };
 
 const DropboxImage = ({ src, alt, className }: DropboxImageType) => {

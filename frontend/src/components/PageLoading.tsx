@@ -1,9 +1,7 @@
 const PageLoading = () => {
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center">
-      <div>
-        <span className="loading loading-ball loading-xl"></span>
-      </div>
+    <div className="w-full h-screen bg-gradient-to-br from-brand-blue to-brand-purple flex flex-col items-center justify-center">
+      <span className="loading loading-dots w-16"></span>
     </div>
   );
 };

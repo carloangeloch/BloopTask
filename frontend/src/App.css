@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@custom-variant dark(&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-purple: #8c50ff;
+  --color-brand-blue: #38b6ff;
+  --color-brand-dark-purple: #19063d;
+  --color-brand-dark-blue: #042a5d;
+  --color-brand-black: #101010;
+  --color-brand-white: #f4f4f4;
+}
+
 /* #root {
   max-width: 1280px;
   margin: 0 auto;

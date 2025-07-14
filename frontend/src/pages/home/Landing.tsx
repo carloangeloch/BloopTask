@@ -7,7 +7,7 @@ const Landing = () => {
       <Link to="/login" className="btn btn-success">
         Login
       </Link>
-      <Link to="/create" className="btn btn-accent">
+      <Link to="/signup" className="btn btn-accent">
         Create Account
       </Link>
     </>

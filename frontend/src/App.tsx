@@ -66,7 +66,7 @@ function App() {
                 }
               />
               <Route
-                path="/create"
+                path="/signup"
                 element={
                   isCheckingAuth ? (
                     <PageLoading />
@@ -90,7 +90,7 @@ function App() {
           </Suspense>
         </QueryClientProvider>
       </Router>
-      <Toaster position="bottom-center" reverseOrder={true} />
+      <Toaster position="top-center" reverseOrder={true} />
     </>
   );
 }

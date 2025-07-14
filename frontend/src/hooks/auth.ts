@@ -5,14 +5,19 @@ import toast from "react-hot-toast";
 import axios, { AxiosError } from "axios";
 
 export const useLogin = () => {
-  const { setAuthUser } = useAuthStore();
+  const { setAuthUser, setIsLoginIn } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: login,
+    onMutate: () => {
+      setIsLoginIn(true);
+    },
+    onSettled: () => {
+      setIsLoginIn(false);
+    },
     onSuccess: (data) => {
       setAuthUser(data);
-      console.log(data);
       toast.success("Login Successfull");
       queryClient.invalidateQueries({ queryKey: ["auth"] });
     },

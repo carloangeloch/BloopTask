@@ -5,6 +5,10 @@ import axios, { AxiosError } from "axios";
 import { ErrorResponse, Link } from "react-router-dom";
 import { emailValidate } from "../../utils/emailValidate";
 import { useAuthStore } from "../../store/authStore";
+import { BsArrowLeft } from "react-icons/bs";
+import DropboxImage from "../../components/DropboxImage";
+import AnimInput from "../../components/AnimInput";
+import { validateString } from "../../utils/validateString";
 
 const SignupPage = () => {
   const { checkAuth } = useAuthStore();
@@ -30,17 +34,25 @@ const SignupPage = () => {
 
   const checkTeamName = async () => {
     try {
+      if (teamName.name.length < 6)
+        throw Error("Please use atleast 6 characters");
+      else if (typeof teamName.name[0] !== "string")
+        throw Error("Start your team with a letter");
+      const validTeam = validateString(teamName.name);
+      if (!validTeam)
+        throw Error("Use letters, number, underscore or hypen only.");
       const res = await checkTeam(teamName);
       if (res.status === 200) setAvailable(true);
     } catch (error) {
       const err = error as AxiosError<ErrorResponse>;
-
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         console.log(status);
         if (status === 400)
           toast.error("Team already exists. Please try a different one.");
         else toast.error("Something went wrong");
+      } else if (error instanceof Error) {
+        toast.error(error.message);
       } else toast.error("Unexpected error occured!");
     }
   };
@@ -84,127 +96,175 @@ const SignupPage = () => {
     }
   };
 
+  const enterKeyPressed = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    target_func: () => void
+  ) => {
+    if (e.key === "Enter") {
+      target_func();
+    }
+  };
+
   return (
-    <div>
-      <div>Create a new Account</div>
-      {registerSuccess ? (
-        <div id="register-success">
-          <div>Registration Success</div>
-          <div>Let start bloop tasking</div>
-          <div>
-            <Link
-              to="/home"
-              className="btn btn-success"
-              onClick={() => checkAuth()}
-            >
-              Let's go!
-            </Link>
+    <div className="w-full min-h-screen flex flex-col items-center justify-center  bg-linear-to-br from-brand-blue  to-brand-purple p-4">
+      <div
+        id="login-card"
+        className="w-full md:w-2/3 xl:w-1/2 2xl:w-1/4 flex flex-col gap-y-4 px-4 md:px-auto"
+      >
+        <Link to="/" className="text-sm flex flex-row items-center gap-x-2">
+          <BsArrowLeft />
+          <em>Back to home</em>
+        </Link>
+        <div
+          id="form-container"
+          className="p-12 bg-brand-white rounded-2xl text-brand-black flex flex-col"
+        >
+          <div id="welcome-name">
+            <div className="flex flex-col items-center gap-4 p-4">
+              <DropboxImage
+                src="https://www.dropbox.com/scl/fi/5rvp0lw5ymrrckk73ixg2/bt-transparent.png?rlkey=489xd0owh8gjbyyaxdpsm74ci&st=oo7ojmxg&dl=0"
+                alt="blooptask icon"
+                className="w-24"
+              />
+              <h3 className="text-xl">Create a new Accoun</h3>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div id="register-account">
-          <div>check for account</div>
-          <label htmlFor="team_name">Team name</label>
-          <input
-            type="text"
-            name="teamName"
-            className="bg-white text-black"
-            onChange={(e) =>
-              setTeamName((t) => ({ ...t, name: e.target.value }))
-            }
-          />
-          <button className="btn btn-success" onClick={() => checkTeamName()}>
-            Check
-          </button>
-          {available && (
-            <div className="text-green-500">Team name is available</div>
-          )}
-          <hr />
-          {available && (
-            <div>
-              <div>Create a user</div>
-              <label htmlFor="email">Email Address</label>
-              <input
+          {registerSuccess ? (
+            <div id="register-success">
+              <div>Registration Success</div>
+              <div>Let start bloop tasking</div>
+              <div>
+                <Link
+                  to="/home"
+                  className="btn btn-success"
+                  onClick={() => checkAuth()}
+                >
+                  Let's go!
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div id="register-account">
+              <div>check for account</div>
+              <AnimInput
                 type="text"
-                name="email"
-                className="bg-white text-black"
+                name="team"
+                content="Team Name"
+                placeholder="Team Name"
+                maxLength={32}
+                onKeyDown={(e) => enterKeyPressed(e, checkTeamName)}
                 onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, email: e.target.value }))
+                  setTeamName((t) => ({ ...t, name: e.target.value }))
                 }
               />
-              <br />
-              <label htmlFor="password">Password</label>
-              <input
-                type="text"
-                name="password"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, password1: e.target.value }))
-                }
-              />
-              <br />
-              <label htmlFor="password2">Confirm Password</label>
-              <input
-                type="text"
-                name="password2"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, password2: e.target.value }))
-                }
-              />
-              <br />
-              <label htmlFor="firstName">First Name</label>
-              <input
-                type="text"
-                name="firstName"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, firstName: e.target.value }))
-                }
-              />
-              <br />
-              <label htmlFor="middleName">Middle Name</label>
-              <input
-                type="text"
-                name="middleName"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, middleName: e.target.value }))
-                }
-              />
-              <br />
-              <label htmlFor="lastName">Last Name</label>
-              <input
-                type="text"
-                name="lastName"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, lastName: e.target.value }))
-                }
-              />
-              <br />
-              <label htmlFor="suffix">Suffix</label>
-              <input
-                type="text"
-                name="suffix"
-                className="bg-white text-black"
-                onChange={(e) =>
-                  setSignupForm((s) => ({ ...s, suffix: e.target.value }))
-                }
-              />
-              {signupForm.email != "" &&
-                signupForm.password1 != "" &&
-                signupForm.password2 != "" &&
-                signupForm.firstName != "" &&
-                signupForm.lastName != "" && (
-                  <div onClick={() => register()}>
-                    <button className="btn btn-info">Register</button>
-                  </div>
-                )}
+              <div className="flex flex-row justify-between items-center">
+                <div className="text-green-500">Team name is available</div>
+                <button
+                  className="btn btn-success mt-2"
+                  onClick={() => checkTeamName()}
+                >
+                  Check
+                </button>
+              </div>
+              {available && (
+                <div>
+                  <div>Create a user</div>
+                  <label htmlFor="email">Email Address</label>
+                  <input
+                    type="text"
+                    name="email"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({ ...s, email: e.target.value }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="password">Password</label>
+                  <input
+                    type="text"
+                    name="password"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({
+                        ...s,
+                        password1: e.target.value,
+                      }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="password2">Confirm Password</label>
+                  <input
+                    type="text"
+                    name="password2"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({
+                        ...s,
+                        password2: e.target.value,
+                      }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="firstName">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({
+                        ...s,
+                        firstName: e.target.value,
+                      }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="middleName">Middle Name</label>
+                  <input
+                    type="text"
+                    name="middleName"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({
+                        ...s,
+                        middleName: e.target.value,
+                      }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="lastName">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({ ...s, lastName: e.target.value }))
+                    }
+                  />
+                  <br />
+                  <label htmlFor="suffix">Suffix</label>
+                  <input
+                    type="text"
+                    name="suffix"
+                    className="bg-white text-black"
+                    onChange={(e) =>
+                      setSignupForm((s) => ({ ...s, suffix: e.target.value }))
+                    }
+                  />
+                  {signupForm.email != "" &&
+                    signupForm.password1 != "" &&
+                    signupForm.password2 != "" &&
+                    signupForm.firstName != "" &&
+                    signupForm.lastName != "" && (
+                      <div onClick={() => register()}>
+                        <button className="btn btn-info">Register</button>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

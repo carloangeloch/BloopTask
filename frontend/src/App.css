@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-@custom-variant dark(&:where(.dark, .dark *));
-
 @theme {
   --color-brand-purple: #8c50ff;
   --color-brand-blue: #38b6ff;

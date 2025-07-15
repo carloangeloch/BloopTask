@@ -7,6 +7,7 @@ type AnimInputType = {
   name: string;
   type: string;
   placeholder: string;
+  maxLength?: number;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
@@ -16,6 +17,7 @@ const AnimInput = ({
   name,
   type,
   placeholder,
+  maxLength,
   onKeyDown,
   onChange,
 }: AnimInputType) => {
@@ -31,6 +33,7 @@ const AnimInput = ({
           name={name}
           className="peer bg-white text-black p-1 w-full rounded-lg outline-slate-200 outline-1 outline-offset-1 focus:outline-brand-purple placeholder:text-white"
           placeholder={placeholder}
+          maxLength={maxLength}
           onKeyDown={onKeyDown}
           onChange={onChange}
         />

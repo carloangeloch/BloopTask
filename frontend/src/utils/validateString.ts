@@ -4,6 +4,6 @@
  * @returns Boolean (true or false)
  */
 export const validateString = (name: string) => {
-  const regex = /^[a-zA-Z0-9_-]/;
+  const regex = /^[a-zA-Z0-9\-_.\s]*$/;
   return regex.test(name);
 };

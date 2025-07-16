@@ -27,17 +27,84 @@ const SignupPage = () => {
     suffix: "",
   };
 
+  const formItemList = [
+    {
+      name: "email",
+      type: "text",
+      content: "Email Address",
+    },
+    {
+      name: "password1",
+      type: "password",
+      content: "Password",
+    },
+    {
+      name: "password2",
+      type: "password",
+      content: "Confirm Password",
+    },
+    {
+      name: "firstName",
+      type: "text",
+      content: "First Name",
+    },
+    {
+      name: "middleName",
+      type: "text",
+      content: "Middle Name",
+    },
+    {
+      name: "lastName",
+      type: "text",
+      content: "Last Name",
+    },
+    {
+      name: "suffix",
+      type: "text",
+      content: "Suffix",
+    },
+  ];
+
+  const formItemOnChange = (
+    name: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    switch (name) {
+      case "email":
+        setSignupForm((s) => ({ ...s, email: e.target.value }));
+        break;
+      case "password1":
+        setSignupForm((s) => ({ ...s, password1: e.target.value }));
+        break;
+      case "password2":
+        setSignupForm((s) => ({ ...s, password2: e.target.value }));
+        break;
+      case "firstName":
+        setSignupForm((s) => ({ ...s, firstName: e.target.value }));
+        break;
+      case "middleName":
+        setSignupForm((s) => ({ ...s, middleName: e.target.value }));
+        break;
+      case "lastName":
+        setSignupForm((s) => ({ ...s, lastName: e.target.value }));
+        break;
+      case "suffix":
+        setSignupForm((s) => ({ ...s, suffix: e.target.value }));
+        break;
+      default:
+        console.log("No matching name");
+    }
+  };
+
   const [teamName, setTeamName] = useState(defaultTeamName);
   const [signupForm, setSignupForm] = useState(defaultSignupForm);
   const [available, setAvailable] = useState(false);
-  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(true);
 
   const checkTeamName = async () => {
     try {
       if (teamName.name.length < 6)
         throw Error("Please use atleast 6 characters");
-      else if (typeof teamName.name[0] !== "string")
-        throw Error("Start your team with a letter");
       const validTeam = validateString(teamName.name);
       if (!validTeam)
         throw Error("Use letters, number, underscore or hypen only.");
@@ -67,6 +134,7 @@ const SignupPage = () => {
         throw new Error("Password must be at least 8 characters long.");
       }
       const isEmail = emailValidate(signupForm.email);
+      console.log("isEmail: ", isEmail);
       if (!isEmail) {
         toast.error("Not a valid email address.");
         throw new Error("Not a valid email address.");
@@ -126,7 +194,11 @@ const SignupPage = () => {
                 alt="blooptask icon"
                 className="w-24"
               />
-              <h3 className="text-xl">Create a new Accoun</h3>
+              {registerSuccess ? (
+                <h3 className="text-xl">Congratulations! 🎉</h3>
+              ) : (
+                <h3 className="text-xl">Create a new Account</h3>
+              )}
             </div>
           </div>
           {registerSuccess ? (
@@ -136,7 +208,7 @@ const SignupPage = () => {
               <div>
                 <Link
                   to="/home"
-                  className="btn btn-success"
+                  className="btn btn-success text-brand-white"
                   onClick={() => checkAuth()}
                 >
                   Let's go!
@@ -145,120 +217,81 @@ const SignupPage = () => {
             </div>
           ) : (
             <div id="register-account">
-              <div>check for account</div>
               <AnimInput
                 type="text"
                 name="team"
                 content="Team Name"
                 placeholder="Team Name"
                 maxLength={32}
+                required={true}
+                disabled={available ? true : false}
                 onKeyDown={(e) => enterKeyPressed(e, checkTeamName)}
                 onChange={(e) =>
                   setTeamName((t) => ({ ...t, name: e.target.value }))
                 }
               />
               <div className="flex flex-row justify-between items-center">
-                <div className="text-green-500">Team name is available</div>
-                <button
-                  className="btn btn-success mt-2"
-                  onClick={() => checkTeamName()}
-                >
-                  Check
-                </button>
+                <div className="text-green-500">
+                  {available && <span>Team name is available</span>}
+                </div>
+                {available ? (
+                  <button
+                    className="btn btn-error text-brand-white mt-2"
+                    onClick={() => setAvailable(false)}
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-success text-brand-white mt-2"
+                    onClick={() => checkTeamName()}
+                  >
+                    Check
+                  </button>
+                )}
               </div>
               {available && (
                 <div>
-                  <div>Create a user</div>
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    type="text"
-                    name="email"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({ ...s, email: e.target.value }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="password">Password</label>
-                  <input
-                    type="text"
-                    name="password"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({
-                        ...s,
-                        password1: e.target.value,
-                      }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="password2">Confirm Password</label>
-                  <input
-                    type="text"
-                    name="password2"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({
-                        ...s,
-                        password2: e.target.value,
-                      }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="firstName">First Name</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({
-                        ...s,
-                        firstName: e.target.value,
-                      }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="middleName">Middle Name</label>
-                  <input
-                    type="text"
-                    name="middleName"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({
-                        ...s,
-                        middleName: e.target.value,
-                      }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="lastName">Last Name</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({ ...s, lastName: e.target.value }))
-                    }
-                  />
-                  <br />
-                  <label htmlFor="suffix">Suffix</label>
-                  <input
-                    type="text"
-                    name="suffix"
-                    className="bg-white text-black"
-                    onChange={(e) =>
-                      setSignupForm((s) => ({ ...s, suffix: e.target.value }))
-                    }
-                  />
-                  {signupForm.email != "" &&
+                  <hr className="my-6 text-brand-blue" />
+                  <div className="text-center">Create a user account</div>
+                  {formItemList.map((f) => {
+                    return (
+                      <AnimInput
+                        key={f.name}
+                        name={f.name}
+                        type={f.type}
+                        content={f.content}
+                        placeholder={f.content}
+                        required={
+                          f.name === "suffix" || f.name === "middleName"
+                            ? false
+                            : true
+                        }
+                        maxLength={f.name == "suffix" ? 5 : 999}
+                        onChange={(e, name = f.name) => {
+                          formItemOnChange(name as string, e);
+                        }}
+                      />
+                    );
+                  })}
+                  <div className="w-full flex flex-row justify-end py-4 h-16">
+                    {signupForm.email != "" &&
                     signupForm.password1 != "" &&
                     signupForm.password2 != "" &&
                     signupForm.firstName != "" &&
-                    signupForm.lastName != "" && (
-                      <div onClick={() => register()}>
-                        <button className="btn btn-info">Register</button>
-                      </div>
+                    signupForm.lastName != "" ? (
+                      <button
+                        className="btn btn-info text-brand-white"
+                        onClick={() => register()}
+                      >
+                        Register
+                      </button>
+                    ) : (
+                      <button className="btn bg-slate-300 border-0 cursor-default relative">
+                        Register
+                      </button>
                     )}
+                  </div>
                 </div>
               )}
             </div>

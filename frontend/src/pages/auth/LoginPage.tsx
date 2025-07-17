@@ -5,8 +5,8 @@ import { useLogin } from "../../hooks/auth";
 import { emailValidate } from "../../utils/emailValidate";
 import { useAuthStore } from "../../store/authStore";
 import { BsArrowLeft } from "react-icons/bs";
-import DropboxImage from "../../components/DropboxImage";
 import AnimInput from "../../components/AnimInput";
+import BloopTaskLogo from "../../components/BloopTaskLogo";
 
 const LoginPage = () => {
   const { mutate: login } = useLogin();
@@ -59,11 +59,7 @@ const LoginPage = () => {
         >
           <div id="welcome-name">
             <div className="flex flex-col items-center gap-4 p-4">
-              <DropboxImage
-                src="https://www.dropbox.com/scl/fi/5rvp0lw5ymrrckk73ixg2/bt-transparent.png?rlkey=489xd0owh8gjbyyaxdpsm74ci&st=oo7ojmxg&dl=0"
-                alt="blooptask icon"
-                className="w-24"
-              />
+              <BloopTaskLogo className="w-24" />
               <h3 className="text-xl">Welcome to BloopTask</h3>
             </div>
           </div>
@@ -146,7 +142,7 @@ const LoginPage = () => {
           <div className="text-center mt-8 text-sm">
             <p>
               Don’t have an account?{" "}
-              <span className="hover:text-brand-purple hover:underline hover:underline-offset-4 cursor-pointer">
+              <span className="text-brand-purple hover:underline hover:underline-offset-4 cursor-pointer">
                 Let us create one!
               </span>
             </p>

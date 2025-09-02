@@ -6,9 +6,9 @@ import { ErrorResponse, Link } from "react-router-dom";
 import { emailValidate } from "../../utils/emailValidate";
 import { useAuthStore } from "../../store/authStore";
 import { BsArrowLeft } from "react-icons/bs";
-import DropboxImage from "../../components/DropboxImage";
 import AnimInput from "../../components/AnimInput";
 import { validateString } from "../../utils/validateString";
+import BloopTaskLogo from "../../components/BloopTaskLogo";
 
 const SignupPage = () => {
   const { checkAuth } = useAuthStore();
@@ -189,11 +189,7 @@ const SignupPage = () => {
         >
           <div id="welcome-name">
             <div className="flex flex-col items-center gap-4 p-4">
-              <DropboxImage
-                src="https://www.dropbox.com/scl/fi/5rvp0lw5ymrrckk73ixg2/bt-transparent.png?rlkey=489xd0owh8gjbyyaxdpsm74ci&st=oo7ojmxg&dl=0"
-                alt="blooptask icon"
-                className="w-24"
-              />
+              <BloopTaskLogo className="w-24" />
               {registerSuccess ? (
                 <h3 className="text-xl">Congratulations! 🎉</h3>
               ) : (
@@ -202,18 +198,15 @@ const SignupPage = () => {
             </div>
           </div>
           {registerSuccess ? (
-            <div id="register-success">
-              <div>Registration Success</div>
-              <div>Let start bloop tasking</div>
-              <div>
-                <Link
-                  to="/home"
-                  className="btn btn-success text-brand-white"
-                  onClick={() => checkAuth()}
-                >
-                  Let's go!
-                </Link>
-              </div>
+            <div id="register-success" className="flex flex-col items-center">
+              <div>You are now registered! Let start bloop tasking</div>
+              <Link
+                to="/home"
+                className="btn btn-success text-brand-white mt-4 w-full md:w-auto"
+                onClick={() => checkAuth()}
+              >
+                Let's go!
+              </Link>
             </div>
           ) : (
             <div id="register-account">

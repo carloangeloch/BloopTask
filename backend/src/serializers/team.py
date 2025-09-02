@@ -9,6 +9,7 @@ class UpdateTeam(BaseModel):
     is_active: bool
 
 class GetTeam(BaseModel):
+    id: int
     name: str
     created_at: datetime
     is_active: bool
